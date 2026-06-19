@@ -863,7 +863,7 @@ export default function App() {
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Full Name</label>
                   <input 
                     type="text" 
-                    value={tempProfile.name}
+                    value={tempProfile?.name || ''}
                     onChange={(e) => setTempProfile({ ...tempProfile, name: e.target.value })}
                     className="input-base"
                     placeholder="e.g. Alex Student"
@@ -873,7 +873,7 @@ export default function App() {
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Course</label>
                   <input 
                     type="text" 
-                    value={tempProfile.course}
+                    value={tempProfile?.course || ''}
                     onChange={(e) => setTempProfile({ ...tempProfile, course: e.target.value })}
                     className="input-base"
                     placeholder="e.g. BS Computer Science"
@@ -883,7 +883,7 @@ export default function App() {
                   <div>
                     <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Year Level</label>
                     <select 
-                      value={tempProfile.yearLevel}
+                      value={tempProfile?.yearLevel || ''}
                       onChange={(e) => setTempProfile({ ...tempProfile, yearLevel: e.target.value })}
                       className="input-base bg-white dark:bg-slate-900"
                     >
@@ -901,7 +901,7 @@ export default function App() {
                     <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Age</label>
                     <input 
                       type="number" 
-                      value={tempProfile.age}
+                      value={tempProfile?.age || ''}
                       onChange={(e) => setTempProfile({ ...tempProfile, age: e.target.value })}
                       className="input-base"
                       placeholder="e.g. 20"
@@ -911,11 +911,13 @@ export default function App() {
               </div>
               <button 
                 onClick={() => {
-                  if (tempProfile.name.trim() && tempProfile.course.trim()) {
+                  const nameVal = tempProfile?.name || '';
+                  const courseVal = tempProfile?.course || '';
+                  if (nameVal.trim() && courseVal.trim()) {
                     setOnboardingStep(2);
                   }
                 }}
-                disabled={!tempProfile.name.trim() || !tempProfile.course.trim()}
+                disabled={!(tempProfile?.name || '').trim() || !(tempProfile?.course || '').trim()}
                 className="w-full py-4 bg-brand-500 disabled:opacity-50 text-white rounded-2xl font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-200"
               >
                 Next: Class Schedule 🗓️
@@ -1081,7 +1083,7 @@ export default function App() {
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Full Name</label>
               <input 
                 type="text" 
-                value={tempProfile.name}
+                value={tempProfile?.name || ''}
                 onChange={(e) => setTempProfile({ ...tempProfile, name: e.target.value })}
                 className="input-base"
               />
@@ -1090,7 +1092,7 @@ export default function App() {
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Course</label>
               <input 
                 type="text" 
-                value={tempProfile.course}
+                value={tempProfile?.course || ''}
                 onChange={(e) => setTempProfile({ ...tempProfile, course: e.target.value })}
                 className="input-base"
                 placeholder="e.g. BS Computer Science"
@@ -1100,7 +1102,7 @@ export default function App() {
               <div>
                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Year Level</label>
                 <select 
-                  value={tempProfile.yearLevel}
+                  value={tempProfile?.yearLevel || ''}
                   onChange={(e) => setTempProfile({ ...tempProfile, yearLevel: e.target.value })}
                   className="input-base bg-white dark:bg-slate-900"
                 >
@@ -1118,7 +1120,7 @@ export default function App() {
                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Age</label>
                 <input 
                   type="number" 
-                  value={tempProfile.age}
+                  value={tempProfile?.age || ''}
                   onChange={(e) => setTempProfile({ ...tempProfile, age: e.target.value })}
                   className="input-base"
                 />
