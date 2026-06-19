@@ -67,11 +67,13 @@ export function DashboardView({
     return 'Good evening';
   };
 
-  const activeTasks = tasks.filter(t => !t.completed);
+  const activeTasks = (tasks || []).filter(t => !t.completed);
   const priorityTasks = activeTasks.filter(t => t.priority === 'high').slice(0, 3);
+  const schedules = Array.isArray(classSchedules) ? classSchedules : [];
 
-  const upcomingClassesCount = events.filter(e => 
+  const upcomingClassesCount = (events || []).filter(e => 
     e.type === 'class' && 
+    e.date &&
     isWithinInterval(parseISO(e.date), { 
       start: startOfDay(new Date()), 
       end: endOfDay(addDays(new Date(), 7)) 
@@ -89,7 +91,7 @@ export function DashboardView({
   };
 
   const getSortedClassesForDay = (day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday') => {
-    return classSchedules
+    return schedules
       .filter(item => item.day === day)
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
   };
@@ -116,13 +118,13 @@ export function DashboardView({
       endTime: newEndTime,
       room: newRoom.trim() || undefined
     };
-    setClassSchedules([...classSchedules, newItem]);
+    setClassSchedules([...schedules, newItem]);
     setNewSubject('');
     setNewRoom('');
   };
 
   const handleRemoveClass = (id: string) => {
-    setClassSchedules(classSchedules.filter(item => item.id !== id));
+    setClassSchedules(schedules.filter(item => item.id !== id));
   };
 
   const dismissPromo = () => {
@@ -135,7 +137,7 @@ export function DashboardView({
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl text-slate-900 dark:text-white font-display font-bold">
-            {getGreeting()}, {userProfile.name.split(' ')[0] || 'Alex'}! 👋
+            {getGreeting()}, {(userProfile?.name || 'Alex').split(' ')[0]}! 👋
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2">Here's what's happening with your studies today.</p>
         </div>
@@ -187,7 +189,7 @@ export function DashboardView({
             </div>
 
             {/* Onboarding Prompts / Helpers */}
-            {classSchedules.length === 0 && showPromo ? (
+            {schedules.length === 0 && showPromo ? (
               <div className="bg-brand-50/50 dark:bg-brand-950/10 border border-brand-100 dark:border-brand-900 rounded-2xl p-5 relative">
                 <button 
                   onClick={dismissPromo}
@@ -465,12 +467,12 @@ export function DashboardView({
           {/* List of Current Schedules */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Enrolled Class Slots ({classSchedules.length})
+              Enrolled Class Slots ({schedules.length})
             </h3>
             
             <div className="max-h-56 overflow-y-auto pr-1 space-y-2 border-t border-slate-100 dark:border-slate-800/80 pt-2">
-              {classSchedules.length > 0 ? (
-                classSchedules.map((cls) => (
+              {schedules.length > 0 ? (
+                schedules.map((cls) => (
                   <div key={cls.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800">
                     <div>
                       <h4 className="font-bold text-xs text-slate-850 dark:text-white leading-tight">{cls.subject}</h4>
