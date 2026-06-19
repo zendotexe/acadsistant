@@ -1,0 +1,6 @@
+{
+  "name": "Acadsistant",
+  "description": "A highly customizable all-in-one productivity manager for students, featuring a calendar, to-do lists, backlogs, reminders, and alarms.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

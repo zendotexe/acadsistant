@@ -1,0 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
+  
+  --color-brand-50: #f0f9ff;
+  --color-brand-100: #e0f2fe;
+  --color-brand-200: #bae6fd;
+  --color-brand-300: #7dd3fc;
+  --color-brand-400: #38bdf8;
+  --color-brand-500: #0ea5e9;
+  --color-brand-600: #0284c7;
+  --color-brand-700: #0369a1;
+  --color-brand-800: #075985;
+  --color-brand-900: #0c4a6e;
+}
+
+@layer base {
+  :root {
+    --bg-main: #f8fafc;
+    --text-main: #0f172a;
+  }
+
+  .dark {
+    --bg-main: #020617;
+    --text-main: #f8fafc;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    @apply font-sans antialiased transition-colors duration-500;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-sm transition-colors;
+  }
+  
+  .dark .glass {
+    @apply bg-slate-900/70 border-slate-800/50;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-md hover:-translate-y-0.5;
+  }
+  
+  /* Global dark mode text overrides for better contrast */
+  .dark .text-slate-900 {
+    @apply text-white;
+  }
+  
+  .dark .text-slate-800 {
+    @apply text-slate-100;
+  }
+  
+  .dark .text-slate-700 {
+    @apply text-slate-200;
+  }
+  
+  .dark .text-slate-600 {
+    @apply text-slate-300;
+  }
+  
+  .dark .text-slate-500 {
+    @apply text-slate-400;
+  }
+
+  .surface {
+    @apply bg-white border border-slate-100 shadow-sm transition-all duration-300;
+  }
+  
+  .dark .surface {
+    @apply bg-slate-900 border-slate-800 shadow-xl;
+  }
+
+  /* Ensure base text inside surface is readable in dark mode */
+  .dark .surface {
+    @apply text-slate-100;
+  }
+  
+  .dark .surface .text-slate-500, 
+  .dark .surface .text-slate-400 {
+    @apply text-slate-400;
+  }
+  
+  .dark .surface .text-slate-900 {
+    @apply text-slate-100;
+  }
+  
+  .input-base {
+    @apply w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none transition-all;
+  }
+  
+  .dark .input-base {
+    @apply bg-slate-800 border-slate-700 text-white focus:bg-slate-700;
+  }
+}
+
