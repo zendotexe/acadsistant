@@ -1,7 +1,8 @@
 export interface UserProfile {
   name: string;
   age: string;
-  major: string;
+  course: string;
+  yearLevel: string;
   onboarded: boolean;
 }
 

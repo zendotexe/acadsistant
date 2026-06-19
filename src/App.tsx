@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   LayoutDashboard, 
   Calendar as CalendarIcon, 
   CheckSquare, 
   Layers, 
   Bell, 
+  BellOff, 
   AlarmClock, 
   Settings,
   Menu,
@@ -66,6 +67,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [darkMode, setDarkMode] = useLocalStorage('acadsistant-dark-mode', false);
   const [backupStatus, setBackupStatus] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -81,7 +83,7 @@ export default function App() {
         alarms: JSON.parse(localStorage.getItem('acadsistant-alarms') || '[]'),
         courses: JSON.parse(localStorage.getItem('acadsistant-courses') || '[]'),
         focusSessions: JSON.parse(localStorage.getItem('acadsistant-focus-sessions') || '[]'),
-        profile: JSON.parse(localStorage.getItem('acadsistant-profile') || '{"name":"","age":"","major":"","onboarded":false}'),
+        profile: JSON.parse(localStorage.getItem('acadsistant-profile') || '{"name":"","age":"","course":"","yearLevel":"","onboarded":false}'),
         darkMode: JSON.parse(localStorage.getItem('acadsistant-dark-mode') || 'false'),
       };
 
@@ -144,7 +146,8 @@ export default function App() {
   const [userProfile, setUserProfile] = useLocalStorage<UserProfile>('acadsistant-profile', {
     name: '',
     age: '',
-    major: '',
+    course: '',
+    yearLevel: '',
     onboarded: false
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -208,6 +211,279 @@ export default function App() {
 
     return () => clearInterval(interval);
   }, [alarms]);
+
+  const filteredEvents = searchQuery
+    ? events.filter(e => e.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    : [];
+
+  const filteredTasks = searchQuery
+    ? tasks.filter(t => 
+        t.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (t.description && t.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : [];
+
+  const filteredBacklogs = searchQuery
+    ? backlogs.filter(b => b.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    : [];
+
+  const filteredReminders = searchQuery
+    ? reminders.filter(r => r.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    : [];
+
+  const hasSearchResults = 
+    filteredEvents.length > 0 || 
+    filteredTasks.length > 0 || 
+    filteredBacklogs.length > 0 || 
+    filteredReminders.length > 0;
+
+  const [dismissedNotificationIds, setDismissedNotificationIds] = useLocalStorage<string[]>('acadsistant-dismissed-notifications', []);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+
+  // Generate dynamic college notifications
+  const dynamicNotifications = useMemo(() => {
+    const list: Array<{ id: string; title: string; description: string; time: string; type: 'urgent' | 'warning' | 'info' | 'success'; tab?: string }> = [];
+
+    // 1. High-priority tasks that are uncompleted
+    tasks.filter(t => !t.completed && t.priority === 'high').forEach(t => {
+      list.push({
+        id: `task-${t.id}`,
+        title: 'High Priority Task Unfinished',
+        description: `"${t.title}" is urgent. Focus on completing this assignment today.`,
+        time: 'Urgent',
+        type: 'urgent',
+        tab: 'tasks'
+      });
+    });
+
+    // 2. Backlogs pending action (todo or doing)
+    backlogs.filter(b => b.status !== 'done' && b.priority !== 'low').forEach(b => {
+      list.push({
+        id: `backlog-${b.id}`,
+        title: 'Actionable Backlog Alert',
+        description: `"${b.title}" is currently marked as "${b.status === 'in-progress' ? 'doing' : 'to-do'}". Ensure to outline goals for it!`,
+        time: 'Pending',
+        type: 'warning',
+        tab: 'backlogs'
+      });
+    });
+
+    // 3. Upcoming Calendar Events (Today or Tomorrow)
+    const todayStr = new Date().toDateString();
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toDateString();
+
+    events.forEach(e => {
+      const eDate = new Date(e.date);
+      const eDateStr = eDate.toDateString();
+      if (eDateStr === todayStr) {
+        list.push({
+          id: `event-${e.id}`,
+          title: 'Class/Exam Scheduled Today',
+          description: `"${e.title}" is scheduled today. Double-check your daily timetable matrix!`,
+          time: 'Today',
+          type: 'info',
+          tab: 'calendar'
+        });
+      } else if (eDateStr === tomorrowStr) {
+        list.push({
+          id: `event-${e.id}`,
+          title: 'Upcoming Event Tomorrow',
+          description: `"${e.title}" starts tomorrow. Make sure you are prepared!`,
+          time: 'Tomorrow',
+          type: 'info',
+          tab: 'calendar'
+        });
+      }
+    });
+
+    // 4. Reminders
+    reminders.filter(r => r.active).forEach(r => {
+      list.push({
+        id: `reminder-${r.id}`,
+        title: 'Active Reminder',
+        description: `Reminder for "${r.title}". Click here to view details.`,
+        time: 'Now',
+        type: 'info',
+        tab: 'reminders'
+      });
+    });
+
+    // 5. Active alarms
+    alarms.filter(a => a.enabled).forEach(a => {
+      list.push({
+        id: `alarm-${a.id}`,
+        title: 'Alarms Clock Status',
+        description: `Daily study alarm "${a.label || 'Alarm'}" will trigger at ${a.time}.`,
+        time: 'Active',
+        type: 'success',
+        tab: 'alarms'
+      });
+    });
+
+    return list.filter(n => !dismissedNotificationIds.includes(n.id));
+  }, [tasks, backlogs, events, reminders, alarms, dismissedNotificationIds]);
+
+  const renderSearchResultsList = (onItemClick: () => void) => {
+    if (!searchQuery) return null;
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+          <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Search Results</span>
+          <button 
+            onClick={() => {
+              setSearchQuery('');
+              onItemClick();
+            }}
+            className="text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white font-medium"
+          >
+            Clear
+          </button>
+        </div>
+
+        {!hasSearchResults && (
+          <div className="text-center py-6 text-slate-500 dark:text-slate-400 text-sm">
+            No matches found for <span className="font-semibold text-slate-800 dark:text-slate-300">"{searchQuery}"</span>
+          </div>
+        )}
+
+        {filteredEvents.length > 0 && (
+          <div className="space-y-1.5">
+            <h4 className="text-xs font-extrabold text-blue-500 uppercase tracking-wider flex items-center gap-1.5 px-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              Calendar Events ({filteredEvents.length})
+            </h4>
+            <div className="space-y-1">
+              {filteredEvents.map(event => (
+                <button
+                  key={event.id}
+                  onClick={() => {
+                    setActiveTab('calendar');
+                    setSearchQuery('');
+                    onItemClick();
+                  }}
+                  className="w-full text-left p-2 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-lg transition-colors flex items-center justify-between pointer-events-auto"
+                >
+                  <span className="text-sm text-slate-705 dark:text-slate-200 font-medium line-clamp-1">{event.title}</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0 ml-2">
+                    {new Date(event.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {filteredTasks.length > 0 && (
+          <div className="space-y-1.5">
+            <h4 className="text-xs font-extrabold text-brand-500 uppercase tracking-wider flex items-center gap-1.5 px-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
+              To-Do List ({filteredTasks.length})
+            </h4>
+            <div className="space-y-1">
+              {filteredTasks.map(task => (
+                <button
+                  key={task.id}
+                  onClick={() => {
+                    setActiveTab('tasks');
+                    setSearchQuery('');
+                    onItemClick();
+                  }}
+                  className="w-full text-left p-2 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-lg transition-colors flex flex-col pointer-events-auto"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className={cn(
+                      "text-sm font-medium line-clamp-1",
+                      task.completed ? "line-through text-slate-400 dark:text-slate-500" : "text-slate-707 dark:text-slate-200"
+                    )}>
+                      {task.title}
+                    </span>
+                    <span className={cn(
+                      "text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-full shrink-0 ml-2",
+                      task.priority === 'high' ? "bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400" :
+                      task.priority === 'medium' ? "bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-450" :
+                      "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                    )}>
+                      {task.priority}
+                    </span>
+                  </div>
+                  {task.description && (
+                    <span className="text-xs text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5">{task.description}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {filteredBacklogs.length > 0 && (
+          <div className="space-y-1.5">
+            <h4 className="text-xs font-extrabold text-violet-500 uppercase tracking-wider flex items-center gap-1.5 px-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-500"></span>
+              Backlogs ({filteredBacklogs.length})
+            </h4>
+            <div className="space-y-1">
+              {filteredBacklogs.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab('backlogs');
+                    setSearchQuery('');
+                    onItemClick();
+                  }}
+                  className="w-full text-left p-2 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-lg transition-colors flex items-center justify-between pointer-events-auto"
+                >
+                  <span className="text-sm text-slate-707 dark:text-slate-200 font-medium line-clamp-1">{item.title}</span>
+                  <span className={cn(
+                    "text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full shrink-0 ml-2",
+                    item.status === 'done' ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400" :
+                    item.status === 'in-progress' ? "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400" :
+                    "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                  )}>
+                    {item.status === 'in-progress' ? 'doing' : item.status}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {filteredReminders.length > 0 && (
+          <div className="space-y-1.5">
+            <h4 className="text-xs font-extrabold text-amber-500 uppercase tracking-wider flex items-center gap-1.5 px-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              Reminders ({filteredReminders.length})
+            </h4>
+            <div className="space-y-1">
+              {filteredReminders.map(reminder => (
+                <button
+                  key={reminder.id}
+                  onClick={() => {
+                    setActiveTab('reminders');
+                    setSearchQuery('');
+                    onItemClick();
+                  }}
+                  className="w-full text-left p-2 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-lg transition-colors flex items-center justify-between pointer-events-auto"
+                >
+                  <span className={cn(
+                    "text-sm font-medium line-clamp-1",
+                    !reminder.active ? "line-through text-slate-400 dark:text-slate-500" : "text-slate-707 dark:text-slate-200"
+                  )}>
+                    {reminder.title}
+                  </span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0 ml-2">
+                    {reminder.time ? new Date(reminder.time).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : ''}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="flex h-screen overflow-hidden transition-colors duration-500">
@@ -282,26 +558,52 @@ export default function App() {
             initial={{ opacity: 0, x: -100 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -100 }}
-            className="fixed inset-0 bg-white dark:bg-slate-900 z-30 pt-20 px-6 md:hidden"
+            className="fixed inset-0 bg-white dark:bg-slate-900 z-30 pt-20 px-6 md:hidden flex flex-col"
           >
-            <nav className="space-y-4">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={cn(
-                    "flex items-center w-full p-4 rounded-xl text-lg font-medium",
-                    activeTab === tab.id ? "bg-brand-500 text-white" : "text-slate-600 dark:text-slate-300"
-                  )}
+            {/* Mobile Search input */}
+            <div className="relative mb-4 shrink-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search tasks, events, backlogs..." 
+                className="w-full pl-10 pr-10 py-2.5 bg-slate-100 dark:bg-slate-800 border-transparent rounded-xl text-sm outline-none text-slate-900 dark:text-white"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                 >
-                  <tab.icon size={24} className="mr-4" />
-                  {tab.label}
+                  <X size={16} />
                 </button>
-              ))}
-            </nav>
+              )}
+            </div>
+
+            {searchQuery ? (
+              <div className="flex-1 overflow-y-auto pb-8 pr-1">
+                {renderSearchResultsList(() => setMobileMenuOpen(false))}
+              </div>
+            ) : (
+              <nav className="space-y-4 overflow-y-auto pb-8">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={cn(
+                      "flex items-center w-full p-4 rounded-xl text-lg font-medium",
+                      activeTab === tab.id ? "bg-brand-500 text-white" : "text-slate-600 dark:text-slate-300"
+                    )}
+                  >
+                    <tab.icon size={24} className="mr-4" />
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -314,9 +616,33 @@ export default function App() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text" 
-              placeholder="Search tasks, events, notes..." 
-              className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-transparent rounded-full text-sm focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-brand-500 transition-all outline-none text-slate-900 dark:text-white"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search tasks, events, backlogs, reminders..." 
+              className="w-full pl-10 pr-10 py-2 bg-slate-100 dark:bg-slate-800 border-transparent rounded-full text-sm focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-brand-500 transition-all outline-none text-slate-900 dark:text-white"
             />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X size={16} />
+              </button>
+            )}
+
+            {/* Desktop Floating Search Results Dropdown */}
+            <AnimatePresence>
+              {searchQuery && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute left-0 right-0 mt-2 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-h-[480px] overflow-y-auto z-50 p-4 space-y-4 shadow-brand-500/5"
+                >
+                  {renderSearchResultsList(() => {})}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           <div className="flex items-center gap-4">
             <button 
@@ -325,17 +651,122 @@ export default function App() {
             >
               {darkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            <button className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors relative"
+              >
+                <Bell size={20} />
+                {dynamicNotifications.length > 0 && (
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
+                )}
+              </button>
+              
+              {/* Notification Dropdown Container */}
+              <AnimatePresence>
+                {isNotificationOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsNotificationOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 z-50 overflow-hidden shadow-brand-500/5"
+                    >
+                      <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="font-bold text-slate-900 text-sm dark:text-white">Notifications</h3>
+                          {dynamicNotifications.length > 0 && (
+                            <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-950/40 text-red-650 dark:text-red-400 text-[10px] font-extrabold rounded-full">
+                              {dynamicNotifications.length} New
+                            </span>
+                          )}
+                        </div>
+                        {dynamicNotifications.length > 0 && (
+                          <button 
+                            onClick={() => {
+                              const ids = dynamicNotifications.map(n => n.id);
+                              setDismissedNotificationIds([...dismissedNotificationIds, ...ids]);
+                            }}
+                            className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-bold"
+                          >
+                            Dismiss All
+                          </button>
+                        )}
+                      </div>
+                      
+                      <div className="max-h-96 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-850 p-2 space-y-1">
+                        {dynamicNotifications.length === 0 ? (
+                          <div className="py-12 text-center text-slate-400 dark:text-slate-500 flex flex-col items-center justify-center gap-2">
+                            <BellOff className="text-slate-300 dark:text-slate-700" size={32} />
+                            <p className="text-sm font-medium">All caught up!</p>
+                            <p className="text-xs max-w-[200px] mx-auto text-slate-400">No new academic alerts or pending tasks needing priority.</p>
+                          </div>
+                        ) : (
+                          dynamicNotifications.map((notif) => (
+                            <div 
+                              key={notif.id}
+                              className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded-xl transition-all relative group flex gap-3 items-start"
+                            >
+                              <div className="mt-1.5 shrink-0">
+                                {notif.type === 'urgent' && <span className="flex w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
+                                {notif.type === 'warning' && <span className="flex w-2 h-2 rounded-full bg-amber-500" />}
+                                {notif.type === 'info' && <span className="flex w-2 h-2 rounded-full bg-blue-500" />}
+                                {notif.type === 'success' && <span className="flex w-2 h-2 rounded-full bg-emerald-500" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-1">
+                                  <p className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
+                                    {notif.title}
+                                  </p>
+                                  <span className="text-[9px] font-extrabold uppercase bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded text-right shrink-0">
+                                    {notif.time}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                                  {notif.description}
+                                </p>
+                                {notif.tab && (
+                                  <button
+                                    onClick={() => {
+                                      if (notif.tab) {
+                                        setActiveTab(notif.tab);
+                                      }
+                                      setIsNotificationOpen(false);
+                                    }}
+                                    className="text-[11px] text-brand-500 hover:text-brand-610 font-bold mt-2 inline-flex items-center gap-0.5 hover:underline"
+                                  >
+                                    View in {tabs.find(t => t.id === notif.tab)?.label} &rarr;
+                                  </button>
+                                )}
+                              </div>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDismissedNotificationIds([...dismissedNotificationIds, notif.id]);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-opacity rounded absolute right-2 top-2"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
             <div className="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-800">
               <div className="text-right">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white leading-none">
                   {userProfile.name || 'Alex Student'}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  {userProfile.major || 'Computer Science Major'}
+                  {userProfile.course || 'BS Computer Science'}
+                  {userProfile.yearLevel ? ` • ${userProfile.yearLevel}` : ' • 3rd Year'}
                 </p>
               </div>
               <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 overflow-hidden">
@@ -420,7 +851,33 @@ export default function App() {
                 placeholder="e.g. Alex Student"
               />
             </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Course</label>
+              <input 
+                type="text" 
+                value={tempProfile.course}
+                onChange={(e) => setTempProfile({ ...tempProfile, course: e.target.value })}
+                className="input-base"
+                placeholder="e.g. BS Computer Science"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Year Level</label>
+                <select 
+                  value={tempProfile.yearLevel}
+                  onChange={(e) => setTempProfile({ ...tempProfile, yearLevel: e.target.value })}
+                  className="input-base bg-white dark:bg-slate-900"
+                >
+                  <option value="">Select Year Level</option>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="4th Year">4th Year</option>
+                  <option value="5th Year">5th Year</option>
+                  <option value="Irregular">Irregular</option>
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Age</label>
                 <input 
@@ -431,21 +888,11 @@ export default function App() {
                   placeholder="e.g. 20"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Major</label>
-                <input 
-                  type="text" 
-                  value={tempProfile.major}
-                  onChange={(e) => setTempProfile({ ...tempProfile, major: e.target.value })}
-                  className="input-base"
-                  placeholder="e.g. Computer Science"
-                />
-              </div>
             </div>
           </div>
           <button 
             onClick={() => {
-              if (tempProfile.name && tempProfile.major) {
+              if (tempProfile.name && tempProfile.course) {
                 setUserProfile({ ...tempProfile, onboarded: true });
               }
             }}
@@ -474,22 +921,39 @@ export default function App() {
                 className="input-base"
               />
             </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Course</label>
+              <input 
+                type="text" 
+                value={tempProfile.course}
+                onChange={(e) => setTempProfile({ ...tempProfile, course: e.target.value })}
+                className="input-base"
+                placeholder="e.g. BS Computer Science"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Year Level</label>
+                <select 
+                  value={tempProfile.yearLevel}
+                  onChange={(e) => setTempProfile({ ...tempProfile, yearLevel: e.target.value })}
+                  className="input-base bg-white dark:bg-slate-900"
+                >
+                  <option value="">Select Year Level</option>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="4th Year">4th Year</option>
+                  <option value="5th Year">5th Year</option>
+                  <option value="Irregular">Irregular</option>
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Age</label>
                 <input 
                   type="number" 
                   value={tempProfile.age}
                   onChange={(e) => setTempProfile({ ...tempProfile, age: e.target.value })}
-                  className="input-base"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Major</label>
-                <input 
-                  type="text" 
-                  value={tempProfile.major}
-                  onChange={(e) => setTempProfile({ ...tempProfile, major: e.target.value })}
                   className="input-base"
                 />
               </div>
