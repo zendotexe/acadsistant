@@ -7,23 +7,25 @@ import {
   Bell, 
   BellOff, 
   AlarmClock, 
-  Settings,
-  Menu,
-  X,
-  Search,
-  User,
-  Plus,
-  Moon,
-  Sun,
-  Timer,
-  GraduationCap,
-  Download,
-  Upload
+  Settings, 
+  Menu, 
+  X, 
+  Search, 
+  User, 
+  Plus, 
+  Moon, 
+  Sun, 
+  Timer, 
+  GraduationCap, 
+  Download, 
+  Upload,
+  Trash2,
+  BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { Task, BacklogItem, Reminder, Alarm, CalendarEvent, UserProfile, EventCategory, Course, FocusSession } from './types';
+import { Task, BacklogItem, Reminder, Alarm, CalendarEvent, UserProfile, EventCategory, Course, FocusSession, ClassScheduleItem } from './types';
 import { Modal } from './components/Modal';
 
 // Views
@@ -83,6 +85,7 @@ export default function App() {
         alarms: JSON.parse(localStorage.getItem('acadsistant-alarms') || '[]'),
         courses: JSON.parse(localStorage.getItem('acadsistant-courses') || '[]'),
         focusSessions: JSON.parse(localStorage.getItem('acadsistant-focus-sessions') || '[]'),
+        classSchedules: JSON.parse(localStorage.getItem('acadsistant-class-schedules') || '[]'),
         profile: JSON.parse(localStorage.getItem('acadsistant-profile') || '{"name":"","age":"","course":"","yearLevel":"","onboarded":false}'),
         darkMode: JSON.parse(localStorage.getItem('acadsistant-dark-mode') || 'false'),
       };
@@ -126,6 +129,7 @@ export default function App() {
           if (imported.alarms) localStorage.setItem('acadsistant-alarms', JSON.stringify(imported.alarms));
           if (imported.courses) localStorage.setItem('acadsistant-courses', JSON.stringify(imported.courses));
           if (imported.focusSessions) localStorage.setItem('acadsistant-focus-sessions', JSON.stringify(imported.focusSessions));
+          if (imported.classSchedules) localStorage.setItem('acadsistant-class-schedules', JSON.stringify(imported.classSchedules));
           if (imported.profile) localStorage.setItem('acadsistant-profile', JSON.stringify(imported.profile));
           if (imported.darkMode !== undefined) localStorage.setItem('acadsistant-dark-mode', JSON.stringify(imported.darkMode));
 
@@ -152,6 +156,18 @@ export default function App() {
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempProfile, setTempProfile] = useState<UserProfile>(userProfile);
+  
+  // Weekly class schedules state
+  const [classSchedules, setClassSchedules] = useLocalStorage<ClassScheduleItem[]>('acadsistant-class-schedules', []);
+  
+  // Onboarding wizard states
+  const [onboardingStep, setOnboardingStep] = useState(1);
+  const [onboardSchedules, setOnboardSchedules] = useState<ClassScheduleItem[]>([]);
+  const [onboardSubject, setOnboardSubject] = useState('');
+  const [onboardDay, setOnboardDay] = useState<'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday'>('Monday');
+  const [onboardStartTime, setOnboardStartTime] = useState('09:00');
+  const [onboardEndTime, setOnboardEndTime] = useState('10:30');
+  const [onboardRoom, setOnboardRoom] = useState('');
 
   useEffect(() => {
     setTempProfile(userProfile);
@@ -817,7 +833,7 @@ export default function App() {
               transition={{ duration: 0.2 }}
               className="max-w-7xl mx-auto relative z-10"
             >
-              {activeTab === 'dashboard' && <DashboardView tasks={tasks} reminders={reminders} backlogs={backlogs} events={events} userProfile={userProfile} eventCategories={eventCategories} />}
+              {activeTab === 'dashboard' && <DashboardView tasks={tasks} reminders={reminders} backlogs={backlogs} events={events} userProfile={userProfile} eventCategories={eventCategories} classSchedules={classSchedules} setClassSchedules={setClassSchedules} onNavigate={setActiveTab} />}
               {activeTab === 'calendar' && <CalendarView events={events} setEvents={setEvents} eventCategories={eventCategories} setEventCategories={setEventCategories} />}
               {activeTab === 'tasks' && <TasksView tasks={tasks} setTasks={setTasks} categories={categories} setCategories={setCategories} />}
               {activeTab === 'backlogs' && <BacklogsView backlogs={backlogs} setBacklogs={setBacklogs} />}
@@ -833,73 +849,222 @@ export default function App() {
       <Modal 
         isOpen={!userProfile.onboarded} 
         onClose={() => {}} 
-        title="Welcome to Acadsistant! 👋"
+        title={onboardingStep === 1 ? "Welcome to Acadsistant! 👋" : "Set Up Your Class Timetable 🗓️"}
         hideCloseButton
       >
         <div className="space-y-6">
-          <p className="text-slate-600 dark:text-slate-400">
-            Let's get to know you better. Tell us a bit about yourself to personalize your experience.
-          </p>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Full Name</label>
-              <input 
-                type="text" 
-                value={tempProfile.name}
-                onChange={(e) => setTempProfile({ ...tempProfile, name: e.target.value })}
-                className="input-base"
-                placeholder="e.g. Alex Student"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Course</label>
-              <input 
-                type="text" 
-                value={tempProfile.course}
-                onChange={(e) => setTempProfile({ ...tempProfile, course: e.target.value })}
-                className="input-base"
-                placeholder="e.g. BS Computer Science"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Year Level</label>
-                <select 
-                  value={tempProfile.yearLevel}
-                  onChange={(e) => setTempProfile({ ...tempProfile, yearLevel: e.target.value })}
-                  className="input-base bg-white dark:bg-slate-900"
+          {onboardingStep === 1 ? (
+            <>
+              <p className="text-slate-600 dark:text-slate-400">
+                Let's get to know you better. Tell us a bit about yourself to personalize your experience.
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Full Name</label>
+                  <input 
+                    type="text" 
+                    value={tempProfile.name}
+                    onChange={(e) => setTempProfile({ ...tempProfile, name: e.target.value })}
+                    className="input-base"
+                    placeholder="e.g. Alex Student"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Course</label>
+                  <input 
+                    type="text" 
+                    value={tempProfile.course}
+                    onChange={(e) => setTempProfile({ ...tempProfile, course: e.target.value })}
+                    className="input-base"
+                    placeholder="e.g. BS Computer Science"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Year Level</label>
+                    <select 
+                      value={tempProfile.yearLevel}
+                      onChange={(e) => setTempProfile({ ...tempProfile, yearLevel: e.target.value })}
+                      className="input-base bg-white dark:bg-slate-900"
+                    >
+                      <option value="">Select Year Level</option>
+                      <option value="1st Year">1st Year</option>
+                      <option value="2nd Year">2nd Year</option>
+                      <option value="3rd Year">3rd Year</option>
+                      <option value="4th Year">4th Year</option>
+                      <option value="5th Year">5th Year</option>
+                      <option value="6th Year">6th Year</option>
+                      <option value="Irregular">Irregular</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Age</label>
+                    <input 
+                      type="number" 
+                      value={tempProfile.age}
+                      onChange={(e) => setTempProfile({ ...tempProfile, age: e.target.value })}
+                      className="input-base"
+                      placeholder="e.g. 20"
+                    />
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  if (tempProfile.name.trim() && tempProfile.course.trim()) {
+                    setOnboardingStep(2);
+                  }
+                }}
+                disabled={!tempProfile.name.trim() || !tempProfile.course.trim()}
+                className="w-full py-4 bg-brand-500 disabled:opacity-50 text-white rounded-2xl font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-200"
+              >
+                Next: Class Schedule 🗓️
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-slate-600 dark:text-slate-400">
+                Plot your classes and courses below to populate your weekly timetable. You can skip and do this at any time!
+              </p>
+              
+              <div className="space-y-4">
+                {/* Class Creator Row */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-850 space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Subject Name or Code</label>
+                    <input 
+                      type="text" 
+                      value={onboardSubject}
+                      onChange={(e) => setOnboardSubject(e.target.value)}
+                      className="input-base bg-white dark:bg-slate-900"
+                      placeholder="e.g. CS101 - Programming"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Day</label>
+                      <select 
+                        value={onboardDay}
+                        onChange={(e) => setOnboardDay(e.target.value as any)}
+                        className="input-base bg-white dark:bg-slate-900"
+                      >
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                        <option value="Saturday">Saturday</option>
+                        <option value="Sunday">Sunday</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Room / Venue</label>
+                      <input 
+                        type="text" 
+                        value={onboardRoom}
+                        onChange={(e) => setOnboardRoom(e.target.value)}
+                        className="input-base bg-white dark:bg-slate-900"
+                        placeholder="e.g. Room 302"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Start Time</label>
+                      <input 
+                        type="time" 
+                        value={onboardStartTime}
+                        onChange={(e) => setOnboardStartTime(e.target.value)}
+                        className="input-base bg-white dark:bg-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">End Time</label>
+                      <input 
+                        type="time" 
+                        value={onboardEndTime}
+                        onChange={(e) => setOnboardEndTime(e.target.value)}
+                        className="input-base bg-white dark:bg-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                      if (!onboardSubject.trim()) return;
+                      const newItem: ClassScheduleItem = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        subject: onboardSubject.trim(),
+                        day: onboardDay,
+                        startTime: onboardStartTime,
+                        endTime: onboardEndTime,
+                        room: onboardRoom.trim() || undefined
+                      };
+                      setOnboardSchedules([...onboardSchedules, newItem]);
+                      setOnboardSubject('');
+                      setOnboardRoom('');
+                    }}
+                    disabled={!onboardSubject.trim()}
+                    className="w-full py-2 bg-slate-900 dark:bg-slate-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+                  >
+                    <Plus size={14} /> Add Class To Draft
+                  </button>
+                </div>
+
+                {/* Draft list preview */}
+                <div className="space-y-2">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Draft Schedule ({onboardSchedules.length})</span>
+                  <div className="max-h-28 overflow-y-auto space-y-1.5 border-t border-slate-100 dark:border-slate-800/80 pt-1.5 pr-1">
+                    {onboardSchedules.length > 0 ? (
+                      onboardSchedules.map((cls) => (
+                        <div key={cls.id} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/20 rounded-xl border border-slate-100 dark:border-slate-850">
+                          <div>
+                            <p className="text-xs font-bold text-slate-800 dark:text-white truncate max-w-[180px]">{cls.subject}</p>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                              {cls.day} • {cls.startTime} - {cls.endTime} {cls.room ? `• ${cls.room}` : ''}
+                            </p>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => setOnboardSchedules(onboardSchedules.filter(s => s.id !== cls.id))}
+                            className="text-slate-400 hover:text-red-500 p-1 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-400 dark:text-slate-500 font-medium py-4 text-center italic">No class routes added yet.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Completing actions */}
+              <div className="flex gap-4 items-center pt-2">
+                <button 
+                  onClick={() => {
+                    setUserProfile({ ...tempProfile, onboarded: true });
+                    setClassSchedules(onboardSchedules);
+                  }}
+                  className="px-4 py-3 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-xs font-bold transition whitespace-nowrap"
                 >
-                  <option value="">Select Year Level</option>
-                  <option value="1st Year">1st Year</option>
-                  <option value="2nd Year">2nd Year</option>
-                  <option value="3rd Year">3rd Year</option>
-                  <option value="4th Year">4th Year</option>
-                  <option value="5th Year">5th Year</option>
-                  <option value="Irregular">Irregular</option>
-                </select>
+                  Do It Later
+                </button>
+                <button 
+                  onClick={() => {
+                    setUserProfile({ ...tempProfile, onboarded: true });
+                    setClassSchedules(onboardSchedules);
+                  }}
+                  className="flex-1 py-3 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold text-xs transition shadow-md shadow-brand-100 dark:shadow-none"
+                >
+                  Save & Get Started
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Age</label>
-                <input 
-                  type="number" 
-                  value={tempProfile.age}
-                  onChange={(e) => setTempProfile({ ...tempProfile, age: e.target.value })}
-                  className="input-base"
-                  placeholder="e.g. 20"
-                />
-              </div>
-            </div>
-          </div>
-          <button 
-            onClick={() => {
-              if (tempProfile.name && tempProfile.course) {
-                setUserProfile({ ...tempProfile, onboarded: true });
-              }
-            }}
-            className="w-full py-4 bg-brand-500 text-white rounded-2xl font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-200"
-          >
-            Get Started
-          </button>
+            </>
+          )}
         </div>
       </Modal>
 
@@ -945,6 +1110,7 @@ export default function App() {
                   <option value="3rd Year">3rd Year</option>
                   <option value="4th Year">4th Year</option>
                   <option value="5th Year">5th Year</option>
+                  <option value="6th Year">6th Year</option>
                   <option value="Irregular">Irregular</option>
                 </select>
               </div>

@@ -80,3 +80,13 @@ export interface FocusSession {
   courseId?: string; // Optional linked course
   category: 'work' | 'short-break' | 'long-break';
 }
+
+export interface ClassScheduleItem {
+  id: string;
+  subject: string;
+  day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+  startTime: string; // HH:mm format, e.g. "09:00"
+  endTime: string; // HH:mm format, e.g. "10:30"
+  room?: string; // Room / Venue
+}
+

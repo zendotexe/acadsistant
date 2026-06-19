@@ -41,3 +41,34 @@ All notable changes to **Acadsistant** will be documented in this file.
 ### Changed
 - Refactored global search placeholder input to remove the unneeded "notes" skeleton text.
 - Standardized notification header label to say "Notifications" rather than "University Notifications" for clean integration.
+
+---
+
+## [1.0.3] - 2026-06-19
+
+### Fixed
+- **Dashboard View All Tasks Button**:
+  - Wired up the "View All Tasks" action button inside the priority tasks widget.
+  - Linked it to dynamically change the active dashboard tab so users are seamlessly navigated to the **To-Do List** tab on click.
+
+---
+
+## [1.0.4] - 2026-06-19
+
+### Added
+- **Expanded Academic Year Levels**:
+  - Added "6th Year" option to the student onboarding and default settings forms, supporting students pursuing extended curriculum degrees.
+
+---
+
+## [1.2.0] - 2026-06-19
+
+### Added
+- **Interactive Weekly Class Timetable**:
+  - Replaced the static "Today's Schedule" widget on the dashboard with a comprehensive weekly timetabling schedule.
+  - Provided interactive day tabs ('All' for a multi-day grid overview and individual day-of-week slots).
+  - Built a real-time schedule customizing modal supporting subject names, daily schedules, custom hours, and class venues (with local storage persistence).
+- **Multi-Step Onboarding Flow**:
+  - Created a step-by-step onboarding experience that registers student profiles first, followed by a flexible class schedule designer.
+  - Implemented a "Do It Later" option to let users safely postpone timetable customization while maintaining ease of setup on the dashboard.
+
