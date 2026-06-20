@@ -49,4 +49,3 @@ To run and test the codebase locally on your machine:
 - `package.json` - Web NPM dependencies and production bundler configurations.
 - `vite.config.ts` - Lightning-fast bundling and developer server routing.
 - `README.md` - (This document) Step-by-step local testing and deployment instructions.
-

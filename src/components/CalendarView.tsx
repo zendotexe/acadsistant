@@ -183,7 +183,13 @@ export function CalendarView({ events, setEvents, eventCategories, setEventCateg
     setSelectedDate(day);
     setIsModalOpen(true);
     setEditingEventId(null);
-    setNewEvent({ title: '', type: 'class', time: '09:00' });
+    setNewEvent({ 
+      title: '', 
+      categoryId: eventCategories[0]?.id || 'other', 
+      time: '09:00',
+      isAllDay: false,
+      endDate: format(day, 'yyyy-MM-dd')
+    });
   };
 
   const handleEventClick = (e: React.MouseEvent, event: CalendarEvent) => {

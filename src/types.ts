@@ -39,6 +39,7 @@ export interface BacklogItem {
   title: string;
   estimatedHours: number;
   status: 'todo' | 'in-progress' | 'done';
+  priority?: Priority;
 }
 
 export interface Reminder {

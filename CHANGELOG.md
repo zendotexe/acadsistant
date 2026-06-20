@@ -72,3 +72,14 @@ All notable changes to **Acadsistant** will be documented in this file.
   - Created a step-by-step onboarding experience that registers student profiles first, followed by a flexible class schedule designer.
   - Implemented a "Do It Later" option to let users safely postpone timetable customization while maintaining ease of setup on the dashboard.
 
+---
+
+## [1.2.1] - 2026-06-20
+
+### Added
+- **Official Branding Integration**:
+  - Implemented the official Acadsistant branding across all headers, sidebar views (colored vector logo), and browser tab favicon (clean transparent canvas icon).
+- **Persistent Feedback Pop-Up**:
+  - Integrated an uncloseable feedback widget at the bottom-right corner of the application to streamline reporting bugs, comments, and comments via a linked Google Form. Used individual pronouns to reflect the solo-built nature of the platform.
+- **Developer Hyperlink**:
+  - Embedded a custom styled footer hyperlink in the Settings menu ("Made with ❤️ by Marco Sebastian Senarillos/zen.exe") linking directly to the developer's GitHub repository.

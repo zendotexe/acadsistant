@@ -20,13 +20,17 @@ import {
   Download, 
   Upload,
   Trash2,
-  BookOpen
+  BookOpen,
+  MessageSquare,
+  ExternalLink,
+  Heart
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { Task, BacklogItem, Reminder, Alarm, CalendarEvent, UserProfile, EventCategory, Course, FocusSession, ClassScheduleItem } from './types';
 import { Modal } from './components/Modal';
+import coloredLogo from './assets/images/logo_colored_1781963052374.jpg';
 
 // Views
 import { DashboardView } from './components/DashboardView';
@@ -517,12 +521,12 @@ export default function App() {
               animate={{ opacity: 1 }}
               className="flex items-center gap-2"
             >
-              <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold">A</div>
+              <img src={coloredLogo} alt="Acadsistant Logo" className="w-8 h-8 rounded-lg object-contain" referrerPolicy="no-referrer" />
               <span className="text-xl font-display font-bold text-slate-900 dark:text-white">Acadsistant</span>
             </motion.div>
           )}
           {sidebarCollapsed && (
-             <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold mx-auto">A</div>
+             <img src={coloredLogo} alt="Acadsistant Logo" className="w-8 h-8 rounded-lg object-contain mx-auto" referrerPolicy="no-referrer" />
           )}
         </div>
 
@@ -559,7 +563,7 @@ export default function App() {
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 z-40">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold">A</div>
+          <img src={coloredLogo} alt="Acadsistant Logo" className="w-8 h-8 rounded-lg object-contain" referrerPolicy="no-referrer" />
           <span className="text-lg font-display font-bold text-slate-900 dark:text-white">Acadsistant</span>
         </div>
         <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-slate-500 dark:text-slate-400">
@@ -1171,7 +1175,21 @@ export default function App() {
             </div>
           </div>
           
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
+            <div className="text-center pb-2">
+              <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1">
+                Made with <Heart size={10} className="fill-red-500 text-red-500 animate-pulse" /> by{' '}
+                <a 
+                  href="https://github.com/zendotexe" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-brand-500 hover:text-brand-600 font-semibold inline-flex items-center gap-0.5 hover:underline"
+                >
+                  Marco Sebastian Senarillos/zen.exe
+                  <ExternalLink size={10} />
+                </a>
+              </p>
+            </div>
             <button 
               onClick={() => {
                 setUserProfile(tempProfile);
@@ -1184,6 +1202,36 @@ export default function App() {
           </div>
         </div>
       </Modal>
+
+      {/* Persistent, Uncloseable Feedback Pop-Up */}
+      <div className="fixed bottom-4 right-4 z-50 w-80 max-w-sm">
+        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl flex gap-3.5 items-start">
+          <div className="p-2.5 bg-brand-50 dark:bg-brand-950/40 rounded-xl text-brand-500 shrink-0">
+            <MessageSquare size={20} />
+          </div>
+          <div className="space-y-2 flex-1">
+            <div className="flex items-center gap-1.5">
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-400">Feedback & Suggestions</h4>
+              <span className="flex h-2 w-2 relative shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
+              </span>
+            </div>
+            <p className="text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
+              Hello! I built Acadsistant as a solo project to help students stay organized. If you spot any bugs, have suggestions, or want to share comments, please let me know!
+            </p>
+            <a 
+              href="https://forms.gle/2AeYFUpWymuwWz6p6" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex w-full items-center justify-center gap-1.5 py-2 px-3 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-bold transition shadow-xs hover:shadow-md"
+            >
+              Share Feedback
+              <ExternalLink size={12} />
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
