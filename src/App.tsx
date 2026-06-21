@@ -30,8 +30,8 @@ import { cn } from './lib/utils';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { Task, BacklogItem, Reminder, Alarm, CalendarEvent, UserProfile, EventCategory, Course, FocusSession, ClassScheduleItem } from './types';
 import { Modal } from './components/Modal';
-import coloredLogo from './assets/images/logo_colored_1781963052374.png';
-import transparentLogo from './assets/images/logo_transparent_1781963066746.png';
+import coloredLogo from './assets/images/logo_colored.png';
+import transparentLogo from './assets/images/logo_transparent.png';
 
 // Views
 import { DashboardView } from './components/DashboardView';
