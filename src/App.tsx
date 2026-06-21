@@ -30,7 +30,8 @@ import { cn } from './lib/utils';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { Task, BacklogItem, Reminder, Alarm, CalendarEvent, UserProfile, EventCategory, Course, FocusSession, ClassScheduleItem } from './types';
 import { Modal } from './components/Modal';
-import coloredLogo from './assets/images/logo_colored_1781963052374.jpg';
+import coloredLogo from './assets/images/logo_colored_1781963052374.png';
+import transparentLogo from './assets/images/logo_transparent_1781963066746.png';
 
 // Views
 import { DashboardView } from './components/DashboardView';
@@ -71,6 +72,18 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon: Icon, label, active, on
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  useEffect(() => {
+    const link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
+    if (link) {
+      link.href = transparentLogo;
+    } else {
+      const newLink = document.createElement('link');
+      newLink.rel = 'icon';
+      newLink.href = transparentLogo;
+      document.head.appendChild(newLink);
+    }
+  }, []);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
